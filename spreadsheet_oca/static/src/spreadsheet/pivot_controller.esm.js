@@ -1,7 +1,7 @@
 /** @odoo-module **/
 
 import {PivotRenderer} from "@web/views/pivot/pivot_renderer";
-import {_lt} from "@web/core/l10n/translation";
+import {_l} from "@web/core/l10n/translation";
 import {patch} from "@web/core/utils/patch";
 
 patch(PivotRenderer.prototype, {
@@ -38,11 +38,11 @@ patch(PivotRenderer.prototype, {
         );
     },
     getSpreadsheetInsertionTooltip() {
-        var message = _lt("Add to spreadsheet");
+        var message = _l("Add to spreadsheet");
         if (this.containsDuplicatedGroupBys()) {
-            message = _lt("Duplicated groupbys in pivot are not supprted");
+            message = _l("Duplicated groupbys in pivot are not supprted");
         } else if (this.isComparingInfo()) {
-            message = _lt("Comparisons in pivot are not supprted");
+            message = _l("Comparisons in pivot are not supprted");
         }
         return message;
     },

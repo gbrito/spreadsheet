@@ -2,36 +2,30 @@
 
 import * as spreadsheet from "@odoo/o-spreadsheet";
 import {makeDynamicCols, makeDynamicRows} from "../utils/dynamic_generators.esm";
-import {ListDataSource} from "@spreadsheet/list/list_data_source";
-import {PivotDataSource} from "@spreadsheet/pivot/pivot_data_source";
 import {SpreadsheetControlPanel} from "./spreadsheet_controlpanel.esm";
 import {SpreadsheetRenderer} from "./spreadsheet_renderer.esm";
 import {registry} from "@web/core/registry";
+import {standardActionServiceProps} from "@web/webclient/actions/action_service";
 import {useService} from "@web/core/utils/hooks";
+
+const {load} = spreadsheet;
 
 const uuidGenerator = new spreadsheet.helpers.UuidGenerator();
 const actionRegistry = registry.category("actions");
-const {Component, onMounted, onWillStart, useSubEnv} = owl;
+const {Component, onWillStart, useSubEnv} = owl;
 
 export class ActionSpreadsheetOca extends Component {
     setup() {
-        this.router = useService("router");
         this.orm = useService("orm");
         this.notification = useService("notification");
         const params = this.props.action.params || this.props.action.context.params;
         this.spreadsheetId = params.spreadsheet_id;
         this.model = params.model || "spreadsheet.spreadsheet";
         this.import_data = params.import_data || {};
-        onMounted(() => {
-            this.router.pushState({
-                spreadsheet_id: this.spreadsheetId,
-                model: this.model,
-            });
-        });
         onWillStart(async () => {
             // We need to load in case the data comes from an XLSX
             this.record =
-                spreadsheet.load(
+                load(
                     await this.orm.call(
                         this.model,
                         "get_spreadsheet_data",
@@ -46,6 +40,7 @@ export class ActionSpreadsheetOca extends Component {
             notifyUser: this.notifyUser.bind(this),
         });
     }
+
     notifyUser(notification) {
         this.notification.add(notification.text, {
             type: notification.type,
@@ -60,7 +55,6 @@ export class ActionSpreadsheetOca extends Component {
             this.orm.call(this.model, "write", [this.spreadsheetId, data]);
         } else {
             this.spreadsheetId = await this.orm.call(this.model, "create", [data]);
-            this.router.pushState({spreadsheet_id: this.spreadsheetId});
         }
     }
     /**
@@ -177,11 +171,11 @@ export class ActionSpreadsheetOca extends Component {
             },
             name: this.import_data.name,
         };
-        const dataSource = spreadsheet_model.config.custom.dataSources.add(
-            dataSourceId,
-            ListDataSource,
-            list_info
-        );
+        spreadsheet_model.dispatch("ADD_ODOO_LIST", {
+            listId: dataSourceId,
+            definition: list_info,
+        });
+        const dataSource = spreadsheet_model.getters.getListDataSource(dataSourceId);
         await dataSource.load();
         spreadsheet_model.dispatch("INSERT_ODOO_LIST", {
             sheetId,
@@ -222,11 +216,11 @@ export class ActionSpreadsheetOca extends Component {
             searchParams: this.cleanSearchParams(),
             name: this.import_data.name,
         };
-        const dataSource = spreadsheet_model.config.custom.dataSources.add(
-            dataSourceId,
-            PivotDataSource,
-            pivot_info
-        );
+        spreadsheet_model.dispatch("ADD_PIVOT", {
+            pivotId: dataSourceId,
+            definition: pivot_info,
+        });
+        const dataSource = spreadsheet_model.getters.getPivotDataSource(dataSourceId);
         await dataSource.load();
         var {cols, rows, measures} = dataSource.getTableStructure().export();
         if (this.import_data.dyn_number_of_rows) {
@@ -286,6 +280,7 @@ ActionSpreadsheetOca.components = {
     SpreadsheetRenderer,
     SpreadsheetControlPanel,
 };
+ActionSpreadsheetOca.props = {...standardActionServiceProps};
 actionRegistry.add("action_spreadsheet_oca", ActionSpreadsheetOca, {
     force: true,
 });

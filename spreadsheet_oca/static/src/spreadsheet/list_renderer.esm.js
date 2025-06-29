@@ -1,13 +1,13 @@
 /** @odoo-module **/
-import {useBus, useService} from "@web/core/utils/hooks";
 import {ListRenderer} from "@web/views/list/list_renderer";
 import {omit} from "@web/core/utils/objects";
 import {patch} from "@web/core/utils/patch";
+import {useBus, useService} from "@web/core/utils/hooks";
+import {user} from "@web/core/user";
 
 patch(ListRenderer.prototype, {
     setup() {
         super.setup(...arguments);
-        this.userService = useService("user");
         this.actionService = useService("action");
         useBus(
             this.env.bus,
@@ -34,8 +34,8 @@ patch(ListRenderer.prototype, {
                             domain: model.domain,
                             orderBy: model.orderBy,
                             context: omit(
-                                model.context,
-                                ...Object.keys(this.userService.context)
+                                this.model.searchParams.context,
+                                ...Object.keys(user.context)
                             ),
                             columns: this.getSpreadsheetColumns(),
                             fields: model.fields,
